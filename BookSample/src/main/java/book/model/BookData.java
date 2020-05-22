@@ -1,0 +1,21 @@
+package book.model;
+
+public class BookData {
+
+	Root root;
+
+	public Root getRoot() {
+		return root;
+	}
+
+	public void setRoot(Root root) {
+		this.root = root;
+	}
+
+	@Override
+	public String toString() {
+		return "BookData [root=" + root + "]";
+	}
+	
+	
+}

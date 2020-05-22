@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="goods">
+
+<!-- 제품전체조회 -->
+<select id="getBookList" resultType="book.model.Book">
+	select * from v_booksinfo;
+</select>
+
+<!-- 카테고리조회 -->
+<select id = "getCategory" resultType="book.model.Category">
+	select * from category;
+</select>
+
+
+<!-- 등록된 제품인지 확인 -->
+<select id = "checkBook" resultType="int" parameterType="String">
+	select count(*)as cnt from books where isbn = #{isbn}
+</select>
+
+<!-- 제품추가 -->
+<insert id="addBook" parameterType="book.model.Book">
+	INSERT INTO books(isbn,title,author,publisher,category_id,publish_date)VALUES(#{isbn},#{title},#{author},#{publisher},#{category_id},#{publish_date});
+</insert>
+
+<!-- 책제목검색 -->
+<select id="searchBook" resultType = "book.model.Book" parameterType="String">
+	select * from v_booksinfo where title like concat('%',#{title},'%')
+</select>
+
+<!-- 재고있는 제품명만 출력 -->
+<select id="getGoodsName" resultType="book.model.Book">
+	select distinct isbn, title from v_stocks_goods order by title;
+</select>
+
+<!-- isbn으로 책검색 -->
+<select id="getTitle" resultType="String" parameterType="String">
+	select title from books where isbn = #{isbn}
+</select>
+
+<!-- 제품삭제 -->
+<delete id="deleteBook" parameterType="String">
+	delete from books where isbn = #{isbn}
+</delete>
+</mapper>

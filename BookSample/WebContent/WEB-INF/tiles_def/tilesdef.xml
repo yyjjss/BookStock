@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE tiles-definitions PUBLIC
+  "-//Apache Software Foundation//DTD Tiles Configuration 3.0//EN" 
+  "http://tiles.apache.org/dtds/tiles-config_3_0.dtd">
+
+<tiles-definitions>
+	<!--definition: 하나하나 정의하는것 -->
+	<!--Super() -->
+	<definition name="base_layout"
+		template="/WEB-INF/view/template/layout.jsp">
+		<put-attribute name="header"
+			value="/WEB-INF/view/template/header.jsp" />
+	</definition>
+	<definition name="main" extends="base_layout">
+		<put-attribute name="body"
+			value="/WEB-INF/view/bookMain/main.jsp" />
+	</definition>
+	
+	<definition name="booksList" extends="base_layout">
+		<put-attribute name="body"
+			value="/WEB-INF/view/booksInfo/booksList.jsp" />
+	</definition>
+	
+	<definition name="goodsStockInfo" extends="base_layout">
+		<put-attribute name="body"
+			value="/WEB-INF/view/stock/goodsStockInfo.jsp" />
+	</definition>
+	<definition name="in_warehouse" extends="base_layout">
+
+		<put-attribute name="body" value="/WEB-INF/view/bookRequest/in_warehouse.jsp"/>
+
+	</definition>
+
+	<definition name="out_warehouse" extends="base_layout">
+
+		<put-attribute name="body" value="/WEB-INF/view/bookRequest/out_warehouse.jsp"/>
+
+	</definition>
+
+	<definition name="warehouse" extends="base_layout">
+
+		<put-attribute name="body" value="/WEB-INF/view/bookWarehouse/warehouseList.jsp"/>
+
+	</definition>
+
+ 
+
+</tiles-definitions>

@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="bookSql">
+<!--로그인 체크 -->
+<select id="loginCheck" parameterType="map" resultType="book.model.UserDto">select * from users where id=#{id} and password=#{password}</select>
+<!-- 입고리스트 -->
+<!-- <select id="in_warehouseList" resultType="book.model.RequestHistory" parameterType="Date">select r.request_number, r.isbn, r.due_date, r.scheduled_amount, w.warehouse_name, s.status, b.title, b.author, b.publisher, c.category from request_history as r join books as b on r.isbn = b.isbn join warehouses as w on r.warehouse_id = w.warehouse_id join category as c on b.category_id = c.category_id join status as s on r.status_id = s.status_id where r.due_date = 2020-05-11 and r.type_id = 1 order by r.due_date desc</select>
+ --> 
+<select id="in_warehouseList" resultType="book.model.v_RequestHistory" parameterType="String">select * from v_request_history where due_date=#{date} and type_id = 1 order by due_date desc</select>
+<!--입고날짜 선택 리스트  -->
+<select id="in_warehouseDateList" resultType="book.model.v_RequestHistory" parameterType="map">select * from v_request_history where due_date between #{date01} and #{date02} and type_id = 1 order by due_date desc</select>
+
+<!-- 창고리스트 -->
+<select id="warehouseName" resultType="book.model.Warehouse">select * from warehouses</select> 
+<!-- 타입리스트 -->
+<select id="typeName" resultType="book.model.Type">select * from type where type_id != 1</select>
+
+<!--입고신청검색  --> 
+<select id="in_warehouseSearch" resultType="book.model.Book" parameterType="String">select * from books where title like CONCAT('%',#{title},'%')</select>
+<!--입고신청삭제  -->
+<delete id="in_warehouseDelete" parameterType="map">delete from request_history where request_number = #{request_number} and isbn = #{isbn} and type_id = 1</delete>
+<!--입고신청 리스트 Insert  -->
+<insert id="in_warehouseInsert" parameterType="map">insert into request_history (request_number, isbn, type_id, due_date, scheduled_amount, warehouse_id, status_id) values(#{request_number}, #{isbn}, 1, #{due_date}, #{scheduled_amount}, #{warehouse_id}, 1)</insert>
+<!--입고신청 난수 중복체크 -->
+<select id="in_warehouseRandom" parameterType="String" resultType="int">select count(*) from request_history where request_number = #{request_number}</select>
+<!--입고신청 완료 update-->
+<update id="in_warehouseUpdate" parameterType="map">update request_history set completion_date = #{completion_date}, amount = #{amount}, complete_warehouse_id = #{complete_warehouse_id}, status_id = 2 where request_number = #{request_number} and isbn = #{isbn} and type_id = 1</update>
+
+<!--입고완료시 stocks에 해당 isbn의 데이터가 있는지 -->
+<select id="in_warehouseStocks" parameterType="map" resultType="int">select count(*) from stocks where isbn=#{isbn} and date = #{completion_date} and warehouse_id = #{complete_warehouse_id}</select>
+<!--완전 그 해당 창고에 isbn의 재고확인  -->
+<select id="in_warehouseStocksFirst" parameterType="map" resultType="int">select count(*) from stocks where isbn=#{isbn} and warehouse_id = #{complete_warehouse_id}</select>
+
+<!--입고완료시 stocks 첫 insert -->
+<insert id="in_warehouseStocksInFirst" parameterType="map">insert into stocks (isbn, date, warehouse_id, incoming_amount, stock) values(#{isbn}, #{completion_date}, #{complete_warehouse_id}, #{amount}, #{amount})</insert>
+<!--입고완료시 stocks insert -->
+<insert id="in_warehouseStocksIn" parameterType="map">insert into stocks (isbn, date, warehouse_id, incoming_amount, stock) select #{isbn}, #{completion_date}, #{complete_warehouse_id}, #{amount}, stock+#{amount} from stocks <![CDATA[where date < #{completion_date} and isbn = #{isbn} and warehouse_id = #{complete_warehouse_id}]]> order by date desc limit 1</insert>
+<!--입고완료시 stocks update -->
+<update id="in_warehouseStocksUp" parameterType="map">update stocks set incoming_amount = incoming_amount + #{amount}, stock = stock + #{amount} where isbn = #{isbn} and date = #{completion_date} and warehouse_id = #{complete_warehouse_id}</update>
+
+<!-- 출고  -->
+<!-- 출고리스트 -->
+<select id="out_warehouseList" resultType="book.model.v_RequestHistory" parameterType="String">select * from v_request_history where due_date=#{date} and type_id != 1 order by due_date desc</select>
+<!--출고날짜 선택 리스트  -->
+<select id="out_warehouseDateList" resultType="book.model.v_RequestHistory" parameterType="map">select * from v_request_history where due_date between #{date01} and #{date02} and type_id != 1 order by due_date desc</select>
+<!--출고신청 리스트 Insert  -->
+<insert id="out_warehouseInsert" parameterType="map">insert into request_history (request_number, isbn, type_id, due_date, scheduled_amount, warehouse_id, status_id, destination) values(#{request_number}, #{isbn}, #{type_id}, #{due_date}, #{scheduled_amount}, #{warehouse_id}, 1, #{destination})</insert>
+<!--출고신청삭제  -->
+<delete id="out_warehouseDelete" parameterType="map">delete from request_history where request_number = #{request_number} and isbn = #{isbn} and type_id = #{type_id}</delete>
+<!--출고신청 완료 update-->
+<update id="out_warehouseUpdate" parameterType="map">update request_history set completion_date = #{completion_date}, amount = #{amount}, complete_warehouse_id = #{complete_warehouse_id}, status_id = 3 where request_number = #{request_number} and isbn = #{isbn}</update>
+
+<!--출고완료시 stocks update -->
+<update id="out_warehouseStocksUp" parameterType="map">update stocks set release_amount = release_amount + #{amount}, stock = stock - #{amount} where isbn = #{isbn} and date = #{completion_date} and warehouse_id = #{complete_warehouse_id}</update>
+<!--출고완료시 stocks insert -->
+<insert id="out_warehouseStocksIn" parameterType="map">insert into stocks (isbn, date, warehouse_id, release_amount, stock) select #{isbn}, #{completion_date}, #{complete_warehouse_id}, #{amount}, stock-#{amount} from stocks <![CDATA[where date < #{completion_date} and isbn = #{isbn} and warehouse_id = #{complete_warehouse_id}]]> order by date desc limit 1</insert>
+
+<!-- 출고신청 가능 재고 -->
+<!-- stock에 해당 출고일 재고가 존재할시 -->
+<select id="out_stockOk" parameterType="map" resultType="int">select ifnull(if(max(s.stock)=0, 0, (select stock from stocks where isbn=#{isbn} and date = #{completion_date} and warehouse_id = #{complete_warehouse_id})), 0) from stocks s where isbn=#{isbn} and date = #{completion_date} and warehouse_id = #{complete_warehouse_id}</select>
+<!--
+<select id="out_stockOk" parameterType="map" resultType="int">SELECT CASE WHEN (select COUNT(*) FROM stocks where date = #{completion_date} and isbn=#{isbn} and warehouse_id = #{complete_warehouse_id} order by date desc limit 1) = 0 THEN 0 ELSE s.stock END AS case_result FROM stocks s where date = #{completion_date} and isbn=#{isbn} and warehouse_id = #{complete_warehouse_id} order by date desc limit 1</select>
+ -->
+<!-- stock에 해당 출고일 재고가 존재 안할시 -->
+
+<select id="out_stockNo" parameterType="map" resultType="int">select ifnull(if(max(s.stock)=0, 0, (select stock from stocks <![CDATA[where date < #{completion_date} and isbn = #{isbn} and warehouse_id = #{complete_warehouse_id}]]> order by date desc limit 1)), 0) from stocks s <![CDATA[where date < #{completion_date} and isbn = #{isbn} and warehouse_id = #{complete_warehouse_id}]]> order by date desc limit 1</select>
+<!-- 
+<select id="out_stockNo" parameterType="map" resultType="int">select case when (select count(*) from stocks <![CDATA[where date < #{completion_date} and isbn = #{isbn} and warehouse_id = #{complete_warehouse_id}]]> order by date desc limit 1) = 0 then 0 else s.stock end as case_result from stocks s <![CDATA[where date < #{completion_date} and isbn = #{isbn} and warehouse_id = #{complete_warehouse_id}]]> order by date desc limit 1</select>
+ -->
+<!-- 출고일까지의 입고예정수량 -->
+<select id="out_stockInNum" parameterType="map" resultType="int">select if(sum(if(type_id = 1 , scheduled_amount, 0)) is null, 0, sum(if(type_id = 1 , scheduled_amount, 0))) from request_history <![CDATA[where due_date < #{completion_date} and isbn = #{isbn} and warehouse_id = #{complete_warehouse_id} and completion_date is null]]></select>
+<!-- 출고일까지의 출고예정수량 -->
+<select id="out_stockOutNum" parameterType="map" resultType="int">select if(sum(if(type_id != 1 , scheduled_amount, 0)) is null, 0, sum(if(type_id != 1 , scheduled_amount, 0))) from request_history <![CDATA[where due_date <= #{completion_date} and isbn=#{isbn} and warehouse_id = #{complete_warehouse_id} and completion_date is null]]></select>
+
+<!-- 창고정보리스트 -->
+<select id="warehouseList" resultType="book.model.Warehouse">select * from warehouses</select>
+<!-- 창고정보 insert -->
+<insert id="warehouseInsert" parameterType="map">insert into warehouses (zip, address, address_detail, warehouse_name, employee_count, maximum_quantity) values(#{zip}, #{address}, #{address_detail}, #{warehouse_name}, #{employee_count}, #{maximum_quantity})</insert>
+<!-- 창고정보 Update  -->
+<update id="warehouseUpdate" parameterType="map">update warehouses set zip = #{zip}, address = #{address}, address_detail = #{address_detail}, warehouse_name = #{warehouse_name}, employee_count = #{employee_count}, maximum_quantity = #{maximum_quantity} where warehouse_id = #{warehouse_id}</update>
+<!-- 창고삭제  -->
+<delete id="warehouseDelete" parameterType="int">delete from warehouses where warehouse_id = #{warehouse_id}</delete>
+
+
+
+
+</mapper>

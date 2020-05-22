@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="stocks">
+
+<!-- 과거달의 재고이력이 존재하는지 확인 -->
+<select id="checkStockHistory" resultType="int" parameterType="String">
+	select count(*) from information_schema.tables where table_name = #{table_name}
+</select>
+
+
+<!-- 사용하지않음 -->
+
+
+
+<!-- 과거 전체 재고이력습득 -->
+<select id="getAllStockHistory" parameterType="String" resultType="book.model.MonthlyHistory">
+	select * from #{monthly_history} order by date;
+</select>
+
+<!-- 과거 전체 재고이력습득 -->
+<select id="getStockHistory" parameterType="String" resultType="book.model.MonthlyHistory">
+	select * from #{monthly_history} order by date;
+</select>
+
+<!-- 오늘 전체 재고습득 -->
+<select id="getAllTodayStocksDump" resultType="book.model.TodayStock">
+	select * from v_today_stocks;
+</select>
+
+<!-- 전날 재고를 이력으로 추가등록 -->
+<insert id="insertStockHistoryDump" parameterType="String">
+	insert into #{monthly_history}(isbn, warehouse_id, date, incoming_amount, release_amount, stock) select isbn, warehouse_id, date, incoming_amount, release_amount, stock from today_stocks
+</insert>
+
+<!-- 오늘재고 초기화 - 완료 : 0 && 예정합산 update -->
+<update id="initializeTodayStocksDump" parameterType="String">
+	update today_stocks set incoming_scheduled_amount = (select sum(scheduled_amount)as sumAmount from request_history where type_id = 1 and due_date = #{today} and status_id = 1 and today_stocks.isbn = request_history.isbn), release_scheduled_amount = (select sum(scheduled_amount)as sumAmount from request_history where type_id != 1 and due_date = #{today} and status_id = 1 and today_stocks.isbn = request_history.isbn), date = #{today}, incoming_amount = 0, release_amount = 0;
+</update>
+
+<!-- 오늘 특정제품 재고습득 -->
+<select id="getTodayStocksDump" resultType="book.model.TodayStock" parameterType="String">
+	select * from v_today_stocks where isbn = #{isbn};
+</select>
+
+<!-- 과거 특정제품 재고이력습득 -->
+<select id="getStockHistoryDump" parameterType="map" resultType="book.model.MonthlyHistory">
+	select * from #{monthly_history} where isbn = #{isbn} order by date;
+</select>
+
+<!-- 창고별 전체재고이력습득 -->
+<select id="getAllWarehouseStockHistoryDump" parameterType="map" resultType="book.model.MonthlyHistory">
+	select * from #{monthly_history} where warehouse_id = #{warehouse_id} order by date;
+</select>
+
+<!-- 창고별 특정제품 이력습득 -->
+<select id="getWarehouseStockHistoryDump" parameterType="map" resultType="book.model.MonthlyHistory">
+	select * from #{monthly_history} where warehouse_id = #{warehouse_id} AND isbn = #{isbn} order by date;
+</select>
+
+<!-- 창고별 오늘 전체 재고습득 -->
+<select id="getAllWarehouseTodayStockDump" parameterType="int" resultType="book.model.TodayStock">
+	select * from v_today_stocks where warehouse_id = #{warehouse_id} order by date;
+</select>
+
+<!-- 창고별 오늘 전체 재고습득 -->
+<select id="getWarehouseTodayStockDump" parameterType="map" resultType="book.model.TodayStock">
+	select * from v_today_stocks where warehouse_id = #{warehouse_id} and isbn = #{isbn} order by date;
+</select>
+
+
+<!-- 사용하지않음 end -->
+
+
+
+
+
+
+<!-- 전체제품 재고 -->
+<select id="getAllGoodsStock" parameterType="map" resultType="book.model.Stock">
+	SELECT sum(incoming_amount)as incoming_amount, sum(release_amount)as release_amount, sum(stock)as stock, date, title, isbn FROM bookstock.v_stocks_goods where date = #{date} and isbn = #{isbn} group by date, isbn order by date;
+</select>
+
+<!-- 특정제품 재고 -->
+<select id="getGoodsStock" parameterType="map" resultType="book.model.Stock">
+	SELECT sum(incoming_amount)as incoming_amount, sum(release_amount)as release_amount, sum(stock)as stock, date, title, isbn FROM bookstock.v_stocks_goods where date = #{date} and isbn = #{isbn} group by date, isbn order by date;
+</select>
+
+<!-- 전체제품 재고추이 -->
+<select id="getAllGoodsProgress" parameterType="map" resultType="book.model.RequestHistoryProgress">
+	SELECT sum(if(type_id = 1, scheduled_amount, 0))as incoming_amount, sum(if(type_id != 1, scheduled_amount, 0))as release_amount, isbn, due_date, title  FROM bookstock.v_request_history_progress where due_date between #{start_date} and #{end_date} group by isbn, due_date order by due_date;
+</select>
+
+<!-- 특정제품 재고추이 -->
+<select id="getGoodsProgress" parameterType="map" resultType="book.model.RequestHistoryProgress">
+	SELECT sum(if(type_id = 1, scheduled_amount, 0))as incoming_amount, sum(if(type_id != 1, scheduled_amount, 0))as release_amount, isbn, due_date, title  FROM bookstock.v_request_history_progress where due_date =#{due_date} and isbn = #{isbn}  group by isbn, due_date order by due_date;
+</select>
+
+<!--그날 그제품의 재고가 존재하는지 확인 -->
+<select id="checkStockCount" parameterType="map" resultType="int">
+	select count(*)as cnt from stocks where date = #{date} and isbn = #{isbn}
+</select>
+
+<!-- 그날 그 제품의 입출고신청이 존재하는지 확인 -->
+<select id="checkProgressCount" parameterType="map" resultType="int">
+	select count(*)as cnt from v_request_history_progress where isbn = #{isbn} and due_date = #{due_date}
+</select>
+
+<!-- 특정창고의 전체제품 합 -->
+<select id="getAllWarehouseStock" parameterType="map" resultType="book.model.Stock">
+	SELECT ifnull(sum(incoming_amount),0)as incoming_amount, ifnull(sum(release_amount),0)as release_amount, ifnull(sum(stock), 0)as stock, warehouse_name, date
+ FROM bookstock.v_stocks_goods where date = #{date} and warehouse_id = #{warehouse_id} group by warehouse_id, date order by warehouse_name
+</select>
+
+<!-- 특정창고의 전체제품재고가 존재하는지 확인 -->
+<select id="checkAllWarehouseStock" parameterType="map" resultType="int">
+	SELECT count(*)as cnt FROM bookstock.v_stocks_goods where date = #{date} and warehouse_id = #{warehouse_id}
+</select>
+
+<!-- 특정창고의 특정제품 합 -->
+<select id="getWarehouseStock" parameterType="map" resultType="book.model.Stock">
+	SELECT ifnull(sum(incoming_amount),0)as incoming_amount, ifnull(sum(release_amount),0)as release_amount, ifnull(sum(stock), 0)as stock, warehouse_name, date
+ FROM bookstock.v_stocks_goods where date = #{date} and warehouse_id = #{warehouse_id} and isbn = #{isbn} group by warehouse_id, date order by warehouse_name
+</select>
+
+<!-- 특정창고의 특정제품재고가 존재하는지 확인 -->
+<select id="checkWarehouseGoodsStock" parameterType="map" resultType="int">
+	SELECT count(*)as cnt FROM bookstock.v_stocks_goods where date = #{date} and warehouse_id = #{warehouse_id} and isbn = #{isbn}
+</select>
+
+<!-- 해당날짜기준 가장 최근의 재고합 -->
+<select id="getRecentStock" parameterType="map" resultType="int">
+	select ifnull(sum(stock), 0)as stock FROM bookstock.stocks <![CDATA[where date < #{date} and isbn = #{isbn}]]> order by date desc limit 1
+	<!-- <![CDATA[select sum(if(date < #{date}, stock, 0))as stock FROM bookstock.stocks where isbn = #{isbn}]]> -->
+	<!-- select ifnull(stock, 1)as stock FROM bookstock.stocks <![CDATA[where date < #{date} and isbn = #{isbn}]]> order by date desc limit 1 -->
+</select>
+
+<!-- 해당날짜기준 가장 최근의 재고가 있는지 확인 -->
+<select id="checkRecentStock" parameterType="map" resultType="int">
+	select count(*)as cnt FROM bookstock.stocks <![CDATA[where date < #{date} and isbn = #{isbn}]]> order by date desc limit 1
+</select>
+
+<!-- 해당날짜기준 가장 최근의 특정창고의 창고재고합 -->
+<select id="getRecentWarehouseAllStock" parameterType="map" resultType="int">
+	select ifnull(sum(stock),0)as stock FROM bookstock.stocks <![CDATA[where date < #{date} and warehouse_id = #{warehouse_id} order by date desc limit 0,1]]>
+</select>
+
+<!-- 창고id로 창고명 습득 -->
+<select id="getWarehouseName" resultType="String" parameterType="int">
+	select warehouse_name from warehouses where warehouse_id = #{warehouse_id}
+</select>
+
+<!-- 특정창고의 전체제품의 입출고예정의 합 -->
+<select id="getAllWarehouseProgress" parameterType="map" resultType="book.model.RequestHistoryProgress">
+	SELECT sum(if(type_id = 1, scheduled_amount, 0))as incoming_amount, sum(if(type_id != 1, scheduled_amount, 0))as release_amount, warehouse_name, due_date, title  FROM bookstock.v_request_history_progress where due_date =#{due_date} and warehouse_id = #{warehouse_id} group by warehouse_id, due_date order by due_date;
+</select>
+
+<!-- 특정창고의 전체재품의 입출고예정이 존재하는지 확인 -->
+<select id="checkAllWarehouseProgress" parameterType="map" resultType="int">
+	SELECT count(*)as cnt FROM bookstock.v_request_history_progress where due_date =#{due_date} and warehouse_id = #{warehouse_id}
+</select>
+
+<!-- 해당날짜기준 가장 최근의 특정제품의 창고재고합 -->
+<select id="getRecentWarehouseGoodsStock" parameterType="map" resultType="int">
+	select ifnull(sum(stock),0)as stock FROM bookstock.stocks <![CDATA[where isbn = #{isbn} and date < #{date} and warehouse_id = #{warehouse_id} order by date desc limit 0,1]]>
+</select>
+
+<!-- 특정창고의 특정제품의 입출고예정의 합 -->
+<select id="getWarehouseProgress" parameterType="map" resultType="book.model.RequestHistoryProgress">
+	SELECT sum(if(type_id = 1, scheduled_amount, 0))as incoming_amount, sum(if(type_id != 1, scheduled_amount, 0))as release_amount, warehouse_name, due_date, title  FROM bookstock.v_request_history_progress where due_date =#{due_date} and warehouse_id = #{warehouse_id} and isbn = #{isbn} group by warehouse_id, due_date order by due_date;
+</select>
+
+<!-- 특정창고의 특정제품의 입출고예정이 존재하는지 확인 -->
+<select id="checkWarehouseProgress" parameterType="map" resultType="int">
+	SELECT count(*)as cnt FROM bookstock.v_request_history_progress where due_date =#{due_date} and warehouse_id = #{warehouse_id} and isbn = #{isbn}
+</select>
+
+<!-- 삭제가 가능한 제품인지 확인 -> 각창고별 재고들의 합이 0인지 아닌지 -->
+<select id="checkDeleteBook" parameterType="String" resultType="int">
+	SELECT ifnull(sum(sub), 0) sum from (select substring_index(GROUP_CONCAT(s.stock ORDER BY Date DESC), ',', 1) sub fROM bookstock.stocks s where isbn = #{isbn} GROUP BY warehouse_id) p;
+</select>
+
+</mapper>
