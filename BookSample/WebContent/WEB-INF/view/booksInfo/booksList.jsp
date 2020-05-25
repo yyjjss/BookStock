@@ -47,7 +47,7 @@
                                     </button>
                                 </div>     --></div>
                         </div>            
-                        
+                        <input type = "hidden" id = "user_type_id" value = "<%=session.getAttribute("user_type_id")%>">
                         <div class="row">
 							<!-- Table영역 --> 
                             <div class="col-lg-6">
@@ -55,8 +55,9 @@
                                     <div class="card-body" style = "width : 100%"><!-- <h5 class="card-title"> -->
                                      <input id = "searchKeyword" class = "mb-2 form-control-sm form-control" style = "width : 500px; display : inline;">
                                      <a href = "javascript:searchTitle();"><img alt="search" src="${pageContext.request.contextPath}/assets/images/avatars/search.png" style="width: 28px; margin-left: 10px; height : 25px; padding-bottom:5px;"></a>
-                                    
-                                    <button type="button" class="btn mr-2 mb-2 btn-primary" style = "float : right" onclick = "openModal();">등록</button>
+                                    	<c:if test="${user_type_id eq 1}">
+                        	                  <button type="button" class="btn mr-2 mb-2 btn-primary" style = "float : right" onclick = "openModal();">등록</button>
+                                    	</c:if>
 <%--                                     <button class="mb-2 mr-2 btn btn-primary" style = "float:right" onclick = "location.href='${pageContext.request.contextPath}/addGoods.do'">제품등록
                                         </button> --%>
                                         <div class="scroll-area-sm" style = "height : 800px; width : 100%">
@@ -86,7 +87,11 @@
 	                                                <td>${book.isbn}</td>
 	                                                <td>${book.category}</td>
 	                                                <td>${book.publish_date}</td>
-	                                                <td><button class="mb-2 mr-2 btn btn-primary" onclick = "deleteBook('${book.isbn}');">삭제</button></td>
+	                                                <td>
+	                                                <c:if test="${user_type_id eq 1}">
+	                                                <button class="mb-2 mr-2 btn btn-primary" onclick = "deleteBook('${book.isbn}');">삭제</button>
+	                                                </c:if>
+	                                                </td>
 	                                            </tr>
                                             </c:forEach>
                                             </c:if>
@@ -120,7 +125,7 @@
 
 		function search(){
 			var keyword = document.getElementById("kwd").value;
-			//alert(keyword);
+			var user_type_id = document.getElementById("user_type_id").value;
 			$.ajax({
 				type : "get",
 				url : "https://www.nl.go.kr/NL/search/openApi/search.do?key=140af29a41cf7f8643b8a0675525268d1aa8e0cef32ffc324903755c30e63f26&detailSearch=true&and1=and&f2=publisher&v2=%EB%AF%BC%EC%9D%8C%EC%82%AC&systemType=%EC%98%A4%ED%94%84%EB%9D%BC%EC%9D%B8%EC%9E%90%EB%A3%8C&category=%EB%8F%84%EC%84%9C&pageSize=10&pageNum=1&f1=title&apiType=json&v1="+keyword
@@ -191,6 +196,7 @@
 
 		function searchTitle(){
 			var keyword = document.getElementById("searchKeyword").value;
+			var user_type_id = document.getElementById("user_type_id").value;
 			$.ajax({
 				type : "post",
 				url : "searchBook.do",
@@ -211,7 +217,9 @@
 						msg += "<td>"+args[i].isbn+"</td>";
 						msg += "<td>"+args[i].category+"</td>";
 						msg += "<td>"+args[i].publish_date+"</td>";
-						msg += "<td><button class='mb-2 mr-2 btn btn-primary' onclick = \"deleteBook('"+args[i].isbn+"'');\">삭제</button></td>";
+						if(user_type_id == 1){
+							msg += "<td><button class='mb-2 mr-2 btn btn-primary' onclick = \"deleteBook('"+args[i].isbn+"');\">삭제</button></td>";
+						}
 						msg += "</tr>";
 					}
 				}
